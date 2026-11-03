@@ -1,0 +1,5 @@
+name: Unitree Go2
+url: https://github.com/unitreerobotics/unitree_ros
+commit: 3ae893d905d11795ddf1075825ee5010364a1109
+license: BSD-3-Clause
+notes: Visual meshes from robots/go2_description, zero joint pose.

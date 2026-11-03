@@ -1,0 +1,5 @@
+name: ALOHA 2
+url: https://github.com/google-deepmind/mujoco_menagerie
+commit: 98a70c569c4c1b6da467a20012f766ee1f8dc521
+license: BSD-3-Clause
+notes: Two ViperX arms from aloha/aloha.xml, still one OBJ. The arms are yawed 90 degrees about Z and moved apart so the closest points are 0.20 m apart. The table and extrusion frame are not included.

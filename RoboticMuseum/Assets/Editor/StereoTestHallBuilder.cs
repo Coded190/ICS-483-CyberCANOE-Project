@@ -91,12 +91,12 @@ namespace RoboticMuseum.EditorTools
         {
             var stations = new[]
             {
-                new Station("FrankaArm", "Franka Arm", "7-DoF research arm", new Color(0.80f, 0.20f, 0.15f), PrimitiveType.Cylinder, new Vector3(0.35f, 0.7f, 0.35f)),
-                new Station("Quadruped", "Quadruped", "Four-legged mobile robot", new Color(0.20f, 0.55f, 0.25f), PrimitiveType.Cube, new Vector3(1.1f, 0.35f, 0.55f)),
-                new Station("MobileManipulator", "Mobile Manipulator", "Base plus arm", new Color(0.15f, 0.40f, 0.75f), PrimitiveType.Capsule, new Vector3(0.4f, 0.55f, 0.4f)),
-                new Station("IndustrialArm", "Industrial Arm", "Factory robot arm", new Color(0.85f, 0.65f, 0.10f), PrimitiveType.Cylinder, new Vector3(0.45f, 0.9f, 0.45f)),
-                new Station("BimanualRobot", "Bimanual Robot", "Two coordinated arms", new Color(0.55f, 0.20f, 0.65f), PrimitiveType.Sphere, new Vector3(0.35f, 0.35f, 0.35f)),
-                new Station("Humanoid", "Humanoid", "Two-legged humanoid", new Color(0.85f, 0.85f, 0.88f), PrimitiveType.Capsule, new Vector3(0.45f, 0.85f, 0.45f))
+                new Station("FrankaArm", "Franka Arm", "Franka FR3"),
+                new Station("Quadruped", "Quadruped", "Unitree Go2"),
+                new Station("MobileManipulator", "Mobile Manipulator", "Hello Robot Stretch 3"),
+                new Station("IndustrialArm", "Industrial Arm", "Universal Robots UR5e"),
+                new Station("BimanualRobot", "Bimanual Robot", "ALOHA 2"),
+                new Station("Humanoid", "Humanoid", "Unitree G1")
             };
 
             for (int i = 0; i < stations.Length; i++)
@@ -118,31 +118,77 @@ namespace RoboticMuseum.EditorTools
             pedestal.transform.localScale = new Vector3(1.2f, 0.8f, 1.2f);
             pedestal.GetComponent<Renderer>().sharedMaterial = SaveLit("Pedestal", new Color(0.25f, 0.25f, 0.27f));
 
-            var exhibit = GameObject.CreatePrimitive(station.Shape);
-            exhibit.name = "Exhibit";
-            exhibit.transform.SetParent(root.transform, false);
-            exhibit.transform.localScale = station.Scale;
-            float top = 0.8f + station.Scale.y * 0.5f;
-            exhibit.transform.localPosition = new Vector3(0f, top, 0f);
-            exhibit.GetComponent<Renderer>().sharedMaterial = SaveLit(station.Id, station.Color);
-
-            if (station.Id == "BimanualRobot")
+            string prefabPath = $"Assets/Robots/{station.Id}/{station.Id}.prefab";
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (prefab == null)
             {
-                var second = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                second.name = "ExhibitRight";
-                second.transform.SetParent(root.transform, false);
-                second.transform.localScale = station.Scale;
-                second.transform.localPosition = new Vector3(0.45f, top, 0f);
-                exhibit.transform.localPosition = new Vector3(-0.45f, top, 0f);
-                second.GetComponent<Renderer>().sharedMaterial = exhibit.GetComponent<Renderer>().sharedMaterial;
+                throw new FileNotFoundException($"[StereoTestHall] missing exhibit prefab path={prefabPath}");
             }
 
+            var exhibit = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            exhibit.name = "Exhibit";
+            exhibit.transform.SetParent(root.transform, false);
+            exhibit.transform.localPosition = new Vector3(0f, 0.8f, 0f);
+            exhibit.transform.localScale = Vector3.one;
+            FitPedestal(pedestal, exhibit);
+            int meshCount = exhibit.GetComponentsInChildren<MeshFilter>().Length;
+            float height = ExhibitHeight(exhibit);
+            float top = ExhibitTop(exhibit);
+            Debug.Log($"[StereoTestHall] exhibit={station.Id} mesh_count={meshCount} height_m={height:F3} top_y_m={top:F3}");
+            if (top > 3.95f)
+            {
+                throw new System.InvalidOperationException($"[StereoTestHall] exhibit={station.Id} top_y_m={top:F3} intersects the 4 m roof");
+            }
+
+            float plaqueX = pedestal.transform.localScale.x * 0.5f + 0.55f;
             CreatePlaque(
                 root.transform,
                 station.Title + "\n" + station.Blurb,
-                new Vector3(1.35f, 1.35f, 0f),
+                new Vector3(plaqueX, 1.35f, 0f),
                 Quaternion.Euler(0f, -90f, 0f),
                 1.4f);
+        }
+
+        static Bounds ExhibitBounds(GameObject exhibit)
+        {
+            var renderers = exhibit.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0)
+            {
+                throw new System.InvalidOperationException("[StereoTestHall] exhibit has no renderers");
+            }
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            return bounds;
+        }
+
+        static float ExhibitHeight(GameObject exhibit)
+        {
+            return ExhibitBounds(exhibit).size.y;
+        }
+
+        static float ExhibitTop(GameObject exhibit)
+        {
+            return ExhibitBounds(exhibit).max.y;
+        }
+
+        static void FitPedestal(GameObject pedestal, GameObject exhibit)
+        {
+            float span = 0f;
+            Bounds bounds = ExhibitBounds(exhibit);
+            span = Mathf.Max(bounds.size.x, bounds.size.z);
+            if (span <= 1.15f)
+            {
+                return;
+            }
+
+            float side = span + 0.2f;
+            pedestal.transform.localScale = new Vector3(side, 0.8f, side);
+            Debug.Log($"[StereoTestHall] pedestal={exhibit.transform.parent.name} side_m={side:F3} span_m={span:F3}");
         }
 
         static void CreatePlaque(Transform parent, string text, Vector3 localPosition, Quaternion localRotation, float widthMeters)
@@ -314,18 +360,12 @@ namespace RoboticMuseum.EditorTools
             public string Id;
             public string Title;
             public string Blurb;
-            public Color Color;
-            public PrimitiveType Shape;
-            public Vector3 Scale;
 
-            public Station(string id, string title, string blurb, Color color, PrimitiveType shape, Vector3 scale)
+            public Station(string id, string title, string blurb)
             {
                 Id = id;
                 Title = title;
                 Blurb = blurb;
-                Color = color;
-                Shape = shape;
-                Scale = scale;
             }
         }
     }

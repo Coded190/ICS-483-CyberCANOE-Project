@@ -210,6 +210,9 @@ namespace RoboticMuseum.Tests
             WritePng(right, Path.Combine(directory, "right-eye.png"));
             WritePng(sideBySide, Path.Combine(directory, "side-by-side.png"));
             WritePng(anaglyph, Path.Combine(directory, "anaglyph.png"));
+            Texture2D row = RenderExhibitRow();
+            WritePng(row, Path.Combine(directory, "exhibit-row.png"));
+            UnityEngine.Object.DestroyImmediate(row);
 
             int difference = ChannelDifference(left, right);
             bool leftRed = ContainsRedMarker(left);
@@ -300,6 +303,25 @@ namespace RoboticMuseum.Tests
             image.ReadPixels(new Rect(0f, 0f, texture.width, texture.height), 0, 0);
             image.Apply();
             RenderTexture.active = previous;
+            return image;
+        }
+
+        static Texture2D RenderExhibitRow()
+        {
+            var cameraObject = new GameObject("ExhibitRowCamera");
+            var camera = cameraObject.AddComponent<Camera>();
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = new Color(0.62f, 0.64f, 0.66f);
+            camera.fieldOfView = 60f;
+            camera.nearClipPlane = 0.05f;
+            camera.farClipPlane = 40f;
+            camera.cullingMask = ~(1 << 8);
+            camera.transform.position = new Vector3(5.2f, 1.7f, 9.5f);
+            camera.transform.rotation = Quaternion.LookRotation(new Vector3(-4f, 1.2f, 9.5f) - camera.transform.position, Vector3.up);
+            var texture = new RenderTexture(1280, 720, 24);
+            Texture2D image = RenderEye(camera, texture);
+            UnityEngine.Object.DestroyImmediate(cameraObject);
+            UnityEngine.Object.DestroyImmediate(texture);
             return image;
         }
 

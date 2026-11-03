@@ -1,0 +1,5 @@
+name: Universal Robots UR5e
+url: https://github.com/UniversalRobots/Universal_Robots_ROS2_Description
+commit: c7a638ecac5a0e8ff970de67785b9ea472356874
+license: BSD-3-Clause
+notes: Visual meshes from meshes/ur5e only. Zero joint pose.
